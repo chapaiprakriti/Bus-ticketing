@@ -1,11 +1,10 @@
 {
   "name": "seatsathi_backend",
   "version": "1.0.0",
-  "main": "day1.js",
+  "main": "src/index.ts",
   "scripts": {
-    "dev": "npx tsx --watch src/index.ts",
-    "start": "node day1.js",
-    "start-day2": "node day2.js",
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,22 +13,22 @@
   "description": "",
   "devDependencies": {
     "@types/cors": "^2.8.19",
-    "@types/node": "^25.6.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
-  },
-  "dependencies": {
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
-    "multer": "^2.1.1",
-    "tsx": "^4.21.0",
+    "multer": "^2.2.0",
     "uuid": "^14.0.0",
     "zod": "^4.4.2"
   }
