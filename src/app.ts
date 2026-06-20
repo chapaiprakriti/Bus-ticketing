@@ -9,6 +9,7 @@ import { PORT, DUMMY } from "./configs/constant";
 
 const app: Application = express();
 
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
@@ -39,3 +40,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 export { PORT, DUMMY };
 
 export default app;
+//
