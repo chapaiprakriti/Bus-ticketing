@@ -20,6 +20,7 @@ export type PublicUser = {
   contactNumber?: string;
   gender?: string;
   profileImage?: string | null;
+  avatar?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -33,6 +34,7 @@ export class UserService {
       contactNumber: user.contactNumber,
       gender: user.gender,
       profileImage: user.profileImage || null,
+      avatar: user.profileImage || null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -49,6 +51,7 @@ export class UserService {
     userData.password = hashedPassword;
 
     const user = await userRepository.createUser(userData);
+
     return this.toPublicUser(user);
   }
 
@@ -87,7 +90,8 @@ export class UserService {
     };
   }
 
-  async getCurrentUser(userId: string): Promise<PublicUser> {
+  // Sprint 3: whoami support
+  async getUserById(userId: string): Promise<PublicUser> {
     const user = await userRepository.getUserById(userId);
 
     if (!user) {
@@ -97,11 +101,52 @@ export class UserService {
     return this.toPublicUser(user);
   }
 
-  async updateProfile(
-    userId: string,
-    profileData: UpdateProfileDTO
-  ): Promise<PublicUser> {
-    const updatedUser = await userRepository.update(userId, profileData);
+  // Keep old name also, if other files use it
+  async getCurrentUser(userId: string): Promise<PublicUser> {
+    return this.getUserById(userId);
+  }
+
+  // Sprint 3: profile update + image update + password update
+  async updateProfile(userId: string, profileData: any): Promise<PublicUser> {
+    const updateData: any = {};
+
+    if (profileData.fullName) {
+      updateData.fullName = profileData.fullName;
+    }
+
+    if (profileData.contactNumber) {
+      updateData.contactNumber = profileData.contactNumber;
+    }
+
+    if (profileData.gender) {
+      updateData.gender = profileData.gender;
+    }
+
+    if (profileData.profileImage) {
+      updateData.profileImage = profileData.profileImage;
+    }
+
+    // Password update from same /update API
+    if (profileData.currentPassword && profileData.newPassword) {
+      const user = await userRepository.getUserById(userId);
+
+      if (!user) {
+        throw new HttpException(404, "User not found");
+      }
+
+      const isPasswordValid = await bcryptjs.compare(
+        profileData.currentPassword,
+        user.password
+      );
+
+      if (!isPasswordValid) {
+        throw new HttpException(400, "Current password is incorrect");
+      }
+
+      updateData.password = await bcryptjs.hash(profileData.newPassword, 10);
+    }
+
+    const updatedUser = await userRepository.update(userId, updateData);
 
     if (!updatedUser) {
       throw new HttpException(404, "User not found");

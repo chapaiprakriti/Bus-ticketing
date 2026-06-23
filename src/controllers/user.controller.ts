@@ -48,11 +48,12 @@ export class UserController {
       }
 
       const { user, token } = await userService.loginUser(parsedData.data);
-console.log("========== BACKEND LOGIN SUCCESS ==========");
-console.log("User:", user.email);
-console.log("TOKEN:", token);
-console.log("BEARER TOKEN:", `Bearer ${token}`);
-console.log("===========================================");
+
+      console.log("========== BACKEND LOGIN SUCCESS ==========");
+      console.log("User:", user.email);
+      console.log("TOKEN:", token);
+      console.log("BEARER TOKEN:", `Bearer ${token}`);
+      console.log("===========================================");
 
       return ApiResponseHelper.success(
         res,
@@ -68,32 +69,77 @@ console.log("===========================================");
     }
   }
 
+  // Sprint 3: logged in user detail
+  async whoami(req: Request, res: Response) {
+    try {
+      const loggedInUser = (req as any).user;
+
+      if (!loggedInUser?._id && !loggedInUser?.id) {
+        return ApiResponseHelper.error(res, "Unauthorized", 401);
+      }
+
+      const userId = loggedInUser._id || loggedInUser.id;
+
+      const user = await userService.getUserById(userId);
+
+      return ApiResponseHelper.success(
+        res,
+        user,
+        "Logged in user fetched successfully"
+      );
+    } catch (error: any) {
+      return ApiResponseHelper.error(
+        res,
+        error.message || "Internal Server Error",
+        error.status || 500
+      );
+    }
+  }
+
+  // Sprint 3: update profile image, profile detail, and password
   async updateProfile(req: Request, res: Response) {
     try {
       console.log("========== UPDATE PROFILE REQUEST ==========");
-      console.log("Params:", req.params);
+      console.log("Body:", req.body);
       console.log("File:", req.file);
 
-      const userId = String(req.params.id);
+      const loggedInUser = (req as any).user;
 
-      if (!userId) {
-        return ApiResponseHelper.error(res, "User ID is required", 400);
+      if (!loggedInUser?._id && !loggedInUser?.id) {
+        return ApiResponseHelper.error(res, "Unauthorized", 401);
       }
 
-      if (!req.file) {
-        return ApiResponseHelper.error(res, "Profile image is required", 400);
+      const userId = loggedInUser._id || loggedInUser.id;
+
+      const updateData: any = {};
+
+      if (req.body.fullName) {
+        updateData.fullName = req.body.fullName;
       }
 
-      const profileImage = `/uploads/profile/${req.file.filename}`;
+      if (req.body.contactNumber) {
+        updateData.contactNumber = req.body.contactNumber;
+      }
 
-      const updatedUser = await userService.updateProfile(userId, {
-        profileImage,
-      });
+      if (req.body.gender) {
+        updateData.gender = req.body.gender;
+      }
+
+      if (req.file) {
+        updateData.profileImage = `/uploads/profile/${req.file.filename}`;
+      }
+
+      if (req.body.currentPassword && req.body.newPassword) {
+        updateData.currentPassword = req.body.currentPassword;
+        updateData.newPassword = req.body.newPassword;
+      }
+
+      const updatedUser = await userService.updateProfile(userId, updateData);
 
       return ApiResponseHelper.success(
         res,
         updatedUser,
-        "Profile image updated successfully"
+        "Profile updated successfully"
       );
     } catch (error: any) {
       console.log("UPDATE PROFILE ERROR:", error);
