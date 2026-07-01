@@ -30,7 +30,7 @@ export class UserController {
       return ApiResponseHelper.error(
         res,
         error.message || "Internal Server Error",
-        error.status || 500
+        error.statusCode || 500
       );
     }
   }
@@ -51,6 +51,7 @@ export class UserController {
 
       console.log("========== BACKEND LOGIN SUCCESS ==========");
       console.log("User:", user.email);
+      console.log("Role:", user.role);
       console.log("TOKEN:", token);
       console.log("BEARER TOKEN:", `Bearer ${token}`);
       console.log("===========================================");
@@ -64,13 +65,13 @@ export class UserController {
       return ApiResponseHelper.error(
         res,
         error.message || "Internal Server Error",
-        error.status || 500
+        error.statusCode || 500
       );
     }
   }
 
-  // Sprint 3: logged in user detail
-  async whoami(req: Request, res: Response) {
+  // Sprint 3 / Sprint 4: logged-in user detail
+  async whoAmI(req: Request, res: Response) {
     try {
       const loggedInUser = (req as any).user;
 
@@ -80,7 +81,7 @@ export class UserController {
 
       const userId = loggedInUser._id || loggedInUser.id;
 
-      const user = await userService.getUserById(userId);
+      const user = await userService.getUserById(userId.toString());
 
       return ApiResponseHelper.success(
         res,
@@ -91,9 +92,14 @@ export class UserController {
       return ApiResponseHelper.error(
         res,
         error.message || "Internal Server Error",
-        error.status || 500
+        error.statusCode || 500
       );
     }
+  }
+
+  // Alias, in case any route uses lowercase whoami
+  async whoami(req: Request, res: Response) {
+    return this.whoAmI(req, res);
   }
 
   // Sprint 3: update profile image, profile detail, and password
@@ -126,7 +132,7 @@ export class UserController {
       }
 
       if (req.file) {
-        updateData.profileImage = `/uploads/profile/${req.file.filename}`;
+        updateData.profileImage = `/uploads/${req.file.filename}`;
       }
 
       if (req.body.currentPassword && req.body.newPassword) {
@@ -134,7 +140,10 @@ export class UserController {
         updateData.newPassword = req.body.newPassword;
       }
 
-      const updatedUser = await userService.updateProfile(userId, updateData);
+      const updatedUser = await userService.updateProfile(
+        userId.toString(),
+        updateData
+      );
 
       return ApiResponseHelper.success(
         res,
@@ -147,7 +156,7 @@ export class UserController {
       return ApiResponseHelper.error(
         res,
         error.message || "Internal Server Error",
-        error.status || 500
+        error.statusCode || 500
       );
     }
   }

@@ -1,8 +1,12 @@
 export class HttpException extends Error {
-    status: number;
-    // any additional properties
-    constructor(status: number, message: string) {
-        super(message);
-        this.status = status;
-    }
+  statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+
+    this.statusCode = statusCode;
+    this.name = "HttpException";
+
+    Object.setPrototypeOf(this, HttpException.prototype);
+  }
 }

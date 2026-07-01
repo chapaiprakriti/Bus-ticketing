@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin User Management</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .card {
+        background: white;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      }
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .toolbar input,
+      .toolbar select,
+      .toolbar button,
+      form input,
+      form select {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+      }
+      .toolbar button,
+      form button {
+        background: #2563eb;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+      }
+      .actions button {
+        margin-right: 6px;
+        cursor: pointer;
+        border: none;
+        padding: 6px 8px;
+        border-radius: 6px;
+        color: white;
+      }
+      .edit { background: #f59e0b; }
+      .delete { background: #dc2626; }
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal.open { display: flex; }
+      .modal-content {
+        width: min(560px, 92vw);
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 12px;
+      }
+      .pager {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 14px;
+      }
+      .pager button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .status { color: #047857; font-weight: 600; }
+      .error { color: #b91c1c; }
+      .empty { color: #6b7280; }
+      form { display: grid; gap: 10px; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <div class="toolbar">
+          <h2>Admin user management</h2>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <input id="searchInput" placeholder="Search by name or email" />
+            <button id="createBtn">Create user</button>
+          </div>
+        </div>
+        <div id="status" class="status"></div>
+        <div id="error" class="error"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+        <div class="pager">
+          <button id="prevBtn">Previous</button>
+          <span id="pageInfo"></span>
+          <button id="nextBtn">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <h3 id="modalTitle">Create user</h3>
+        <form id="userForm">
+          <div class="grid">
+            <input name="fullName" placeholder="Full name" required />
+            <input name="email" type="email" placeholder="Email" required />
+          </div>
+          <div class="grid">
+            <input name="contactNumber" placeholder="Contact number" required />
+            <select name="gender" required>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="grid">
+            <select name="role">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+            <input name="password" type="password" placeholder="Password" />
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" id="cancelBtn" style="background:#6b7280;">Cancel</button>
+            <button type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const state = { page: 1, limit: 10, search: '', users: [], meta: null, editingId: null };
+      const apiBase = '/api/v1/admin/users';
+      const tbody = document.getElementById('userTableBody');
+      const statusEl = document.getElementById('status');
+      const errorEl = document.getElementById('error');
+      const searchInput = document.getElementById('searchInput');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageInfo = document.getElementById('pageInfo');
+      const modal = document.getElementById('modal');
+      const modalTitle = document.getElementById('modalTitle');
+      const form = document.getElementById('userForm');
+
+      function setStatus(message) {
+        statusEl.textContent = message || '';
+      }
+
+      function setError(message) {
+        errorEl.textContent = message || '';
+      }
+
+      async function loadUsers() {
+        setStatus('Loading users...');
+        setError('');
+        try {
+          const query = new URLSearchParams({ page: state.page, limit: state.limit, search: state.search });
+          const res = await fetch(`${apiBase}?${query.toString()}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+          });
+          const payload = await res.json();
+          if (!res.ok) throw new Error(payload.message || 'Failed to load users');
+          state.users = payload.data || [];
+          state.meta = payload.meta || { page: 1, limit: 10, total: 0, totalPages: 1 };
+          renderTable();
+        } catch (err) {
+          setError(err.message || 'Unable to load users');
+          tbody.innerHTML = '<tr><td colspan="6" class="empty">Unable to load users.</td></tr>';
+        }
+      }
+
+      function renderTable() {
+        if (!state.users.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty">No users found.</td></tr>';
+          pageInfo.textContent = 'No results';
+          prevBtn.disabled = true;
+          nextBtn.disabled = true;
+          return;
+        }
+        tbody.innerHTML = state.users.map((user) => `
+          <tr>
+            <td>${user._id}</td>
+            <td>${user.fullName}</td>
+            <td>${user.email}</td>
+            <td><span class="pill">${user.role || 'user'}</span></td>
+            <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+            <td class="actions">
+              <button class="edit" data-id="${user._id}">Edit</button>
+              <button class="delete" data-id="${user._id}">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+        pageInfo.textContent = `Page ${state.meta.page} of ${state.meta.totalPages}`;
+        prevBtn.disabled = state.meta.page <= 1;
+        nextBtn.disabled = state.meta.page >= state.meta.totalPages;
+        setStatus(`Showing ${state.users.length} of ${state.meta.total} users`);
+      }
+
+      function openModal(editingUser = null) {
+        form.reset();
+        if (editingUser) {
+          state.editingId = editingUser._id;
+          modalTitle.textContent = 'Edit user';
+          Object.entries(editingUser).forEach(([key, value]) => {
+            const field = form.elements.namedItem(key);
+            if (field && key !== 'password') {
+              field.value = value || '';
+            }
+          });
+        } else {
+          state.editingId = null;
+          modalTitle.textContent = 'Create user';
+        }
+        modal.classList.add('open');
+      }
+
+      function closeModal() {
+        modal.classList.remove('open');
+        form.reset();
+        state.editingId = null;
+      }
+
+      async function submitForm(event) {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        if (!payload.fullName || !payload.email || !payload.contactNumber || !payload.gender) {
+          setError('Please fill all required fields');
+          return;
+        }
+        if (!state.editingId && !payload.password) {
+          setError('Password is required for new users');
+          return;
+        }
+        const method = state.editingId ? 'PUT' : 'POST';
+        const url = state.editingId ? `${apiBase}/${state.editingId}` : apiBase;
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || 'Request failed');
+        closeModal();
+        setStatus(state.editingId ? 'User updated' : 'User created');
+        loadUsers();
+      }
+
+      async function deleteUser(id) {
+        if (!window.confirm('Delete this user?')) return;
+        const res = await fetch(`${apiBase}/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || 'Delete failed');
+        setStatus('User deleted');
+        loadUsers();
+      }
+
+      document.getElementById('createBtn').addEventListener('click', () => openModal());
+      document.getElementById('cancelBtn').addEventListener('click', closeModal);
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+      });
+      form.addEventListener('submit', async (event) => {
+        try { await submitForm(event); } catch (err) { setError(err.message || 'Unable to save user'); }
+      });
+      searchInput.addEventListener('input', (event) => {
+        state.search = event.target.value;
+        state.page = 1;
+        loadUsers();
+      });
+      prevBtn.addEventListener('click', () => { if (state.meta?.page > 1) { state.page -= 1; loadUsers(); } });
+      nextBtn.addEventListener('click', () => { if (state.meta?.page < state.meta?.totalPages) { state.page += 1; loadUsers(); } });
+      tbody.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const id = button.getAttribute('data-id');
+        if (button.classList.contains('edit')) {
+          const user = state.users.find((item) => item._id === id);
+          if (user) openModal(user);
+        }
+        if (button.classList.contains('delete')) {
+          deleteUser(id);
+        }
+      });
+
+      loadUsers();
+    </script>
+  </body>
+</html>

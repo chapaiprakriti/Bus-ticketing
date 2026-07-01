@@ -2,27 +2,58 @@ import mongoose, { Schema, Document } from "mongoose";
 import { UserType } from "../types/user.type";
 
 export interface IUser extends UserType, Document {
-    // can add mongo related attr
-    _id: mongoose.Types.ObjectId;
-    createdAt: Date;
-    updatedAt: Date;
-    role?: "admin" | "user";
+  _id: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+  role?: "admin" | "user";
+  profileImage?: string | null;
 }
+
 const UserMongoSchema: Schema = new Schema<IUser>(
-    {
-        fullName: { type: String, required: true },
-        contactNumber: { type: String, required: true, unique: true },
-        email: { type: String, required: true, unique: true },
-        gender: { type: String, required: true },
-        password: { type: String, required: true },
-        role: { type: String, enum: ["admin", "user"], default: "user" }
+  {
+    fullName: { type: String, required: true },
+
+    contactNumber: {
+      type: String,
+      required: true,
+      unique: true,
     },
-    {
-        timestamps: true // createdAt and updatedAt will be automatically added and managed by mongoose
-    }
-)
-export const UserModel = mongoose.model<IUser>
-(
-    "User", // db.users -> Model Name "User"
-    UserMongoSchema
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    gender: {
+      type: String,
+      required: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["admin", "user"],
+      default: "user",
+    },
+
+    profileImage: {
+      type: String,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export const UserModel = mongoose.model<IUser>(
+  "User",
+  UserMongoSchema
 );

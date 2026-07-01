@@ -3,41 +3,57 @@ import cors from "cors";
 import path from "path";
 
 import userRouter from "./routes/user.route";
+import adminRouter from "./routes/admin/admin.routes";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { PORT, DUMMY } from "./configs/constant";
 
 const app: Application = express();
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// this is required to show uploaded images
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use(express.static(path.join(process.cwd(), "public")));
+
+app.get("/admin", (_req: Request, res: Response) => {
+  res.sendFile(path.join(process.cwd(), "public", "admin.html"));
+});
 
 app.use("/api/v1/auth", userRouter);
+app.use("/api/v1/admin", adminRouter);
 
-app.get("/", (req: Request, res: Response) => {
-  return res.send("Hello, TypeScript-Express!");
+app.get("/", (_req: Request, res: Response) => {
+  res.status(200).json({
+    message: "Seat Sathi API is running",
+    port: PORT,
+    dummy: DUMMY,
+  });
 });
 
-app.use((req: Request, res: Response) => {
-  return res.status(404).json({ message: "API not found" });
+// 404 handler
+app.use((_req: Request, _res: Response, next: NextFunction) => {
+  next(new HttpException(404, "Route not found"));
 });
 
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error("Error:", err);
+// Global error handler
+app.use(
+  (
+    error: Error | HttpException,
+    _req: Request,
+    res: Response,
+    _next: NextFunction
+  ) => {
+    if (error instanceof HttpException) {
+      return ApiResponseHelper.error(res, error.message, error.statusCode);
+    }
 
-  if (err instanceof HttpException) {
-    return ApiResponseHelper.error(res, err.message, err.status);
+    console.error(error);
+
+    return ApiResponseHelper.error(res, "Internal server error", 500);
   }
+);
 
-  return ApiResponseHelper.error(res, "Internal Server Error", 500);
-});
-
-export { PORT, DUMMY };
-
+export { PORT, DUMMY } from "./configs/constant";
 export default app;
-//

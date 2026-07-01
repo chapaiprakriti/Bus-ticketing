@@ -19,6 +19,7 @@ export type PublicUser = {
   email: string;
   contactNumber?: string;
   gender?: string;
+  role?: "admin" | "user";
   profileImage?: string | null;
   avatar?: string | null;
   createdAt?: Date;
@@ -27,18 +28,19 @@ export type PublicUser = {
 
 export class UserService {
   private toPublicUser(user: IUser): PublicUser {
-    return {
-      id: user._id.toString(),
-      fullName: user.fullName,
-      email: user.email,
-      contactNumber: user.contactNumber,
-      gender: user.gender,
-      profileImage: user.profileImage || null,
-      avatar: user.profileImage || null,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-  }
+  return {
+    id: user._id.toString(),
+    fullName: user.fullName,
+    email: user.email,
+    contactNumber: user.contactNumber,
+    gender: user.gender,
+    role: user.role,
+    profileImage: user.profileImage || null,
+    avatar: user.profileImage || null,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
 
   async createUser(userData: CreateUserDTO): Promise<PublicUser> {
     const existingEmail = await userRepository.getUserByEmail(userData.email);
@@ -72,15 +74,15 @@ export class UserService {
     }
 
     const token = jwt.sign(
-      {
-        id: user._id.toString(),
-        fullName: user.fullName,
-        email: user.email,
-      },
-      SECRET_KEY,
-      { expiresIn: "30d" }
-    );
-
+  {
+    id: user._id.toString(),
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+  },
+  SECRET_KEY,
+  { expiresIn: "30d" }
+);
     console.log("Bearer Token:");
     console.log(`Bearer ${token}`);
 
