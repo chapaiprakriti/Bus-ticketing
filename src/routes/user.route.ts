@@ -10,6 +10,10 @@ const userController = new UserController();
 userRouter.post("/register", userController.createUser.bind(userController));
 userRouter.post("/login", userController.loginUser.bind(userController));
 
+// Forgot / reset password (public — no auth required)
+userRouter.post("/forgot-password", userController.forgotPassword.bind(userController));
+userRouter.post("/reset-password",  userController.resetPassword.bind(userController));
+
 // Sprint 3: logged in user detail
 userRouter.get(
   "/whoami",
