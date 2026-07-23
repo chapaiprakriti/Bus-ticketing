@@ -13,3 +13,10 @@ export const DUMMY: string = process.env.DUMMY || "Dummy Export";
 export const MONGODB_URL: string =
   process.env.MONGODB_URL || "mongodb://localhost:27017/seatsathi";
 export const SECRET_KEY: string = process.env.SECRET_KEY || "merosecretkey";
+
+// SMTP — for OTP emails
+export const SMTP_HOST: string  = process.env.SMTP_HOST  || "smtp.gmail.com";
+export const SMTP_PORT: number  = Number(process.env.SMTP_PORT) || 587;
+export const SMTP_USER: string  = process.env.SMTP_USER  || "";
+export const SMTP_PASS: string  = process.env.SMTP_PASS  || "";
+export const SMTP_FROM: string  = process.env.SMTP_FROM  || "SeatSathi <noreply@seatsathi.com>";
