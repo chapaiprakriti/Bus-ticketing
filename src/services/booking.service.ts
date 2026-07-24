@@ -64,7 +64,7 @@ export class BookingService {
     const bookingReference = `BK-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
     const booking = await bookingRepository.createBooking({
-      user: userId,
+      user: userId as any,
       origin: bookingData.origin,
       destination: bookingData.destination,
       operatorName: bookingData.operatorName,

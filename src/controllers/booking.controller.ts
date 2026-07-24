@@ -79,7 +79,7 @@ export class BookingController {
 
       const booking = await bookingService.getBookingById(
         loggedInUser._id.toString(),
-        req.params.id
+        String(req.params.id)
       );
 
       return ApiResponseHelper.success(res, booking, "Booking fetched successfully");
