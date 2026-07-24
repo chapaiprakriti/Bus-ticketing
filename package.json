@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node_modules/.bin/tsx src/index.ts",
+    "start": "npx tsx src/index.ts",
     "seed-admin": "tsx src/scripts/seed-Admin.ts",
     "seed-bookings": "tsx src/scripts/seed-bookings.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
