@@ -14,6 +14,10 @@ export const MONGODB_URL: string =
   process.env.MONGODB_URL || "mongodb://localhost:27017/seatsathi";
 export const SECRET_KEY: string = process.env.SECRET_KEY || "merosecretkey";
 
+// Khalti Payment
+export const KHALTI_SECRET_KEY: string = process.env.KHALTI_SECRET_KEY || "test_secret_key_f59e8b7d18b4499ca40f68195a846e9b";
+export const KHALTI_VERIFY_URL: string = "https://a.khalti.com/api/v2/epayment/lookup/";
+
 // SMTP — for OTP emails
 export const SMTP_HOST: string  = process.env.SMTP_HOST  || "smtp.gmail.com";
 export const SMTP_PORT: number  = Number(process.env.SMTP_PORT) || 587;

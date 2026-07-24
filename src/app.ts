@@ -5,6 +5,7 @@ import path from "path";
 import userRouter from "./routes/user.route";
 import adminRouter from "./routes/admin/admin.routes";
 import bookingRouter from "./routes/booking.route";
+import paymentRouter from "./routes/payment.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { PORT, DUMMY } from "./configs/constant";
@@ -29,6 +30,7 @@ app.get("/admin", (_req: Request, res: Response) => {
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/bookings", bookingRouter);
+app.use("/api/v1/payments", paymentRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({
