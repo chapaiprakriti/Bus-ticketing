@@ -1,10 +1,11 @@
 {
   "name": "seatsathi_backend",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "npx tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
     "seed-admin": "tsx src/scripts/seed-Admin.ts",
     "seed-bookings": "tsx src/scripts/seed-bookings.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,6 +21,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.6.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3"
   },
   "dependencies": {
@@ -32,7 +34,6 @@
     "mongoose": "^9.6.2",
     "multer": "^2.2.0",
     "nodemailer": "^9.0.1",
-    "tsx": "^4.22.4",
     "uuid": "^14.0.0",
     "zod": "^4.4.2"
   }
