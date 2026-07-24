@@ -1,10 +1,25 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentController = void 0;
+const zod_1 = require("zod");
 const apihelper_util_1 = require("../utils/apihelper.util");
 const constant_1 = require("../configs/constant");
+const booking_dto_1 = require("../dtos/booking.dto");
 const booking_service_1 = require("../services/booking.service");
 const bookingService = new booking_service_1.BookingService();
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const lookupKhaltiPayment = async (pidx) => {
+    const khaltiRes = await fetch(constant_1.KHALTI_VERIFY_URL, {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${constant_1.KHALTI_SECRET_KEY}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pidx }),
+    });
+    const khaltiData = (await khaltiRes.json());
+    return { khaltiRes, khaltiData };
+};
 class PaymentController {
     /**
      * POST /api/v1/payments/khalti/initiate
@@ -21,10 +36,14 @@ class PaymentController {
             if (!amount || !purchase_order_id || !purchase_order_name || !return_url || !website_url) {
                 return apihelper_util_1.ApiResponseHelper.error(res, "Missing required fields", 400);
             }
+            const amountInPaisa = Math.round(Number(amount));
+            if (!Number.isFinite(amountInPaisa) || amountInPaisa < 1000) {
+                return apihelper_util_1.ApiResponseHelper.error(res, "Amount must be at least Rs. 10 (1000 paisa)", 400);
+            }
             const payload = {
                 return_url,
                 website_url,
-                amount, // in paisa
+                amount: amountInPaisa,
                 purchase_order_id,
                 purchase_order_name,
                 customer_info: {
@@ -72,19 +91,27 @@ class PaymentController {
             if (!pidx) {
                 return apihelper_util_1.ApiResponseHelper.error(res, "pidx is required", 400);
             }
-            // ── Lookup payment status ─────────────────────────────────────────
-            const khaltiRes = await fetch(constant_1.KHALTI_VERIFY_URL, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Key ${constant_1.KHALTI_SECRET_KEY}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ pidx }),
-            });
-            const khaltiData = await khaltiRes.json();
-            console.log("Khalti lookup response:", khaltiData);
-            if (!khaltiRes.ok || khaltiData.status !== "Completed") {
-                return apihelper_util_1.ApiResponseHelper.error(res, `Payment not completed. Status: ${khaltiData.status || "Unknown"}`, 400);
+            const parsedBooking = booking_dto_1.CreateBookingDTO.safeParse(bookingData);
+            if (!parsedBooking.success) {
+                return apihelper_util_1.ApiResponseHelper.error(res, zod_1.z.prettifyError(parsedBooking.error), 400);
+            }
+            // ── Lookup payment status (retry while Khalti is still Pending) ───
+            let khaltiLookupOk = false;
+            let khaltiData = null;
+            for (let attempt = 0; attempt < 4; attempt++) {
+                const lookup = await lookupKhaltiPayment(pidx);
+                khaltiLookupOk = lookup.khaltiRes.ok;
+                khaltiData = lookup.khaltiData;
+                console.log(`Khalti lookup attempt ${attempt + 1}:`, khaltiData);
+                if (khaltiLookupOk && khaltiData.status === "Completed")
+                    break;
+                if (khaltiData.status !== "Pending" && khaltiData.status !== "Initiated")
+                    break;
+                if (attempt < 3)
+                    await sleep(1500);
+            }
+            if (!khaltiLookupOk || khaltiData?.status !== "Completed") {
+                return apihelper_util_1.ApiResponseHelper.error(res, khaltiData?.detail || `Payment not completed. Status: ${khaltiData?.status || "Unknown"}`, 400);
             }
             // ── Create booking as paid ────────────────────────────────────────
             const passengerDetails = {
@@ -92,7 +119,7 @@ class PaymentController {
                 email: loggedInUser.email,
                 contactNumber: loggedInUser.contactNumber,
             };
-            const booking = await bookingService.createBooking(loggedInUser._id.toString(), { ...bookingData, paymentStatus: "paid", paymentMethod: "khalti" }, passengerDetails);
+            const booking = await bookingService.createBooking(loggedInUser._id.toString(), { ...parsedBooking.data, paymentStatus: "paid", paymentMethod: "khalti" }, passengerDetails);
             return apihelper_util_1.ApiResponseHelper.success(res, {
                 booking,
                 transactionId: khaltiData.transaction_id,
