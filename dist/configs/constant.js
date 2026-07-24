@@ -16,7 +16,7 @@ exports.DUMMY = process.env.DUMMY || "Dummy Export";
 exports.MONGODB_URL = process.env.MONGODB_URL || "mongodb://localhost:27017/seatsathi";
 exports.SECRET_KEY = process.env.SECRET_KEY || "merosecretkey";
 // Khalti Payment
-exports.KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY || "test_secret_key_f59e8b7d18b4499ca40f68195a846e9b";
+exports.KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY || "live_secret_key_68791341fdd94846a146f0457ff7b455";
 exports.KHALTI_INITIATE_URL = "https://dev.khalti.com/api/v2/epayment/initiate/";
 exports.KHALTI_VERIFY_URL = "https://dev.khalti.com/api/v2/epayment/lookup/";
 // SMTP — for OTP emails
