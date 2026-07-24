@@ -40,6 +40,7 @@ class PaymentController {
             if (!Number.isFinite(amountInPaisa) || amountInPaisa < 1000) {
                 return apihelper_util_1.ApiResponseHelper.error(res, "Amount must be at least Rs. 10 (1000 paisa)", 400);
             }
+            const isSandbox = constant_1.KHALTI_INITIATE_URL.includes("dev.khalti.com");
             const payload = {
                 return_url,
                 website_url,
@@ -47,9 +48,10 @@ class PaymentController {
                 purchase_order_id,
                 purchase_order_name,
                 customer_info: {
-                    name: loggedInUser.fullName || "Passenger",
-                    email: loggedInUser.email || "",
-                    phone: loggedInUser.contactNumber || "9800000001",
+                    name: loggedInUser.fullName || "Test User",
+                    email: loggedInUser.email || "test@khalti.com",
+                    // Sandbox test wallets only work with the merchant's own secret key + test number
+                    phone: isSandbox ? "9800000001" : (loggedInUser.contactNumber || "9800000001"),
                 },
             };
             const khaltiRes = await fetch(constant_1.KHALTI_INITIATE_URL, {
