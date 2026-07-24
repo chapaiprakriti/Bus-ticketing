@@ -1,9 +1,27 @@
 import { Request, Response } from "express";
+import { z } from "zod";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { KHALTI_SECRET_KEY, KHALTI_INITIATE_URL, KHALTI_VERIFY_URL } from "../configs/constant";
+import { CreateBookingDTO } from "../dtos/booking.dto";
 import { BookingService } from "../services/booking.service";
 
 const bookingService = new BookingService();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const lookupKhaltiPayment = async (pidx: string) => {
+  const khaltiRes = await fetch(KHALTI_VERIFY_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${KHALTI_SECRET_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ pidx }),
+  });
+
+  const khaltiData = (await khaltiRes.json()) as any;
+  return { khaltiRes, khaltiData };
+};
 
 export class PaymentController {
 
@@ -25,10 +43,15 @@ export class PaymentController {
         return ApiResponseHelper.error(res, "Missing required fields", 400);
       }
 
+      const amountInPaisa = Math.round(Number(amount));
+      if (!Number.isFinite(amountInPaisa) || amountInPaisa < 1000) {
+        return ApiResponseHelper.error(res, "Amount must be at least Rs. 10 (1000 paisa)", 400);
+      }
+
       const payload = {
         return_url,
         website_url,
-        amount,           // in paisa
+        amount: amountInPaisa,
         purchase_order_id,
         purchase_order_name,
         customer_info: {
@@ -88,23 +111,30 @@ export class PaymentController {
         return ApiResponseHelper.error(res, "pidx is required", 400);
       }
 
-      // ── Lookup payment status ─────────────────────────────────────────
-      const khaltiRes = await fetch(KHALTI_VERIFY_URL, {
-        method: "POST",
-        headers: {
-          "Authorization": `Key ${KHALTI_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pidx }),
-      });
+      const parsedBooking = CreateBookingDTO.safeParse(bookingData);
+      if (!parsedBooking.success) {
+        return ApiResponseHelper.error(res, z.prettifyError(parsedBooking.error), 400);
+      }
 
-      const khaltiData = await khaltiRes.json() as any;
-      console.log("Khalti lookup response:", khaltiData);
+      // ── Lookup payment status (retry while Khalti is still Pending) ───
+      let khaltiLookupOk = false;
+      let khaltiData: any = null;
 
-      if (!khaltiRes.ok || khaltiData.status !== "Completed") {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const lookup = await lookupKhaltiPayment(pidx);
+        khaltiLookupOk = lookup.khaltiRes.ok;
+        khaltiData = lookup.khaltiData;
+        console.log(`Khalti lookup attempt ${attempt + 1}:`, khaltiData);
+
+        if (khaltiLookupOk && khaltiData.status === "Completed") break;
+        if (khaltiData.status !== "Pending" && khaltiData.status !== "Initiated") break;
+        if (attempt < 3) await sleep(1500);
+      }
+
+      if (!khaltiLookupOk || khaltiData?.status !== "Completed") {
         return ApiResponseHelper.error(
           res,
-          `Payment not completed. Status: ${khaltiData.status || "Unknown"}`,
+          khaltiData?.detail || `Payment not completed. Status: ${khaltiData?.status || "Unknown"}`,
           400
         );
       }
@@ -118,7 +148,7 @@ export class PaymentController {
 
       const booking = await bookingService.createBooking(
         loggedInUser._id.toString(),
-        { ...bookingData, paymentStatus: "paid", paymentMethod: "khalti" },
+        { ...parsedBooking.data, paymentStatus: "paid", paymentMethod: "khalti" },
         passengerDetails
       );
 
