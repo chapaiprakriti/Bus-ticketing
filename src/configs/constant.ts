@@ -15,7 +15,7 @@ export const MONGODB_URL: string =
 export const SECRET_KEY: string = process.env.SECRET_KEY || "merosecretkey";
 
 // Khalti Payment
-export const KHALTI_SECRET_KEY: string = process.env.KHALTI_SECRET_KEY || "live_secret_key_68791341fdd94846a146f0457ff7b455";
+export const KHALTI_SECRET_KEY: string = process.env.KHALTI_SECRET_KEY || "917ec055a87d46d593cffe47f37fb60e";
 export const KHALTI_INITIATE_URL: string = "https://dev.khalti.com/api/v2/epayment/initiate/";
 export const KHALTI_VERIFY_URL: string = "https://dev.khalti.com/api/v2/epayment/lookup/";
 
