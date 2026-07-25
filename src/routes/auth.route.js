@@ -8,9 +8,14 @@ const { whoami, updateProfile } = require("../controllers/auth.controller");
 // Import existing register/login controllers (adjust path to match your project)
 const { register, login } = require("../controllers/auth.controller.public");
 
+const { resetPasswordDirect } = require("../controllers/reset.controller");
+
 // ── Public routes ────────────────────────────────────────────────
 router.post("/register", register);
 router.post("/login", login);
+
+// OTP is verified on the frontend — this just updates the password
+router.post("/reset-password-direct", resetPasswordDirect);
 
 // ── Protected routes (require valid JWT) ────────────────────────
 router.get("/whoami", authMiddleware, whoami);
