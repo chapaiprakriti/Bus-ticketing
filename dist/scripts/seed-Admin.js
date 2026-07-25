@@ -8,8 +8,8 @@ const mongodb_1 = require("../database/mongodb");
 const user_model_1 = require("../models/user.model");
 async function seedAdmin() {
     await (0, mongodb_1.connectToMongoDB)();
-    const email = process.env.ADMIN_EMAIL || "admin@doctor.com";
-    const password = process.env.ADMIN_PASSWORD || "Admin@123";
+    const email = process.env.ADMIN_EMAIL || "admin@gmail.com";
+    const password = process.env.ADMIN_PASSWORD || "adminpassword";
     const existing = await user_model_1.UserModel.findOne({ email });
     if (existing) {
         console.log(`Admin user already exists: ${email}`);
