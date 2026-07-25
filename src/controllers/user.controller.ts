@@ -117,6 +117,38 @@ export class UserController {
     }
   }
 
+  // ── Reset Password: verify OTP + update password ───────────────────────────
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { email, otp, newPassword } = req.body;
+
+      if (!email || !otp || !newPassword) {
+        return ApiResponseHelper.error(res, "email, otp and newPassword are required", 400);
+      }
+      if (String(newPassword).length < 6) {
+        return ApiResponseHelper.error(res, "Password must be at least 6 characters", 400);
+      }
+
+      const valid = otpService.verifyOtp(String(email).toLowerCase(), String(otp));
+      if (!valid) {
+        return ApiResponseHelper.error(res, "Invalid or expired OTP", 400);
+      }
+
+      const user = await userRepo.getUserByEmail(String(email).toLowerCase());
+      if (!user) {
+        return ApiResponseHelper.error(res, "User not found", 404);
+      }
+
+      const hashedPassword = await bcryptjs.hash(String(newPassword), 10);
+      await userRepo.update(user._id.toString(), { password: hashedPassword } as any);
+
+      return ApiResponseHelper.success(res, null, "Password reset successfully. You can now log in.");
+    } catch (error: any) {
+      console.error("resetPassword error:", error);
+      return ApiResponseHelper.error(res, error.message || "Failed to reset password", 500);
+    }
+  }
+
   // ── Reset Password Direct: no OTP needed (verified on frontend) ───────────
   async resetPasswordDirect(req: Request, res: Response) {
     try {
