@@ -1,8 +1,6 @@
-import nodemailer from "nodemailer";
-import { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } from "../configs/constant";
+import { Resend } from "resend";
 
 // ─── In-memory OTP store ────────────────────────────────────────────────────
-// key: email (lowercase)  value: { otp, expiresAt }
 interface OtpEntry {
   otp: string;
   expiresAt: Date;
@@ -18,38 +16,25 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// ─── Nodemailer transporter ─────────────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host:   SMTP_HOST,
-  port:   SMTP_PORT,
-  secure: SMTP_PORT === 465, // true for 465, false for 587
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
-  },
-  connectionTimeout: 15000,
-  greetingTimeout:   15000,
-  socketTimeout:     20000,
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+// ─── Resend client ───────────────────────────────────────────────────────────
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ─── OTP Service ────────────────────────────────────────────────────────────
 export class OtpService {
 
-  /** Generate a 6-digit OTP, store it for 5 minutes, send to email. */
+  /** Generate a 6-digit OTP, store it for 5 minutes, send via Resend. */
   async sendOtp(email: string): Promise<void> {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    // Store OTP immediately — don't wait for email
+    // Store OTP immediately
     otpStore.set(email.toLowerCase(), { otp, expiresAt });
 
-    console.log(`OTP for ${email}: ${otp}`); // visible in Render logs for debugging
+    console.log(`OTP for ${email}: ${otp}`); // visible in Render logs
 
-    const mailOptions = {
-      from:    SMTP_FROM,
+    // Send via Resend (HTTP API — not blocked by Render)
+    const { error } = await resend.emails.send({
+      from:    "Seat Sathi <onboarding@resend.dev>",
       to:      email,
       subject: "SeatSathi — Password Reset OTP",
       html: `
@@ -71,15 +56,14 @@ export class OtpService {
           </p>
         </div>
       `,
-    };
-
-    // Send email in background — don't block the API response
-    transporter.sendMail(mailOptions).catch((err) => {
-      console.error("Failed to send OTP email:", err.message);
     });
+
+    if (error) {
+      console.error("Resend error:", error);
+    }
   }
 
-  /** Verify OTP. Returns true if valid and not expired. Deletes it on success. */
+  /** Verify OTP. Returns true if valid and not expired. Deletes on success. */
   verifyOtp(email: string, otp: string): boolean {
     const entry = otpStore.get(email.toLowerCase());
     if (!entry) return false;
