@@ -22,14 +22,14 @@ setInterval(() => {
 const transporter = nodemailer.createTransport({
   host:   SMTP_HOST,
   port:   SMTP_PORT,
-  secure: SMTP_PORT === 465,
+  secure: SMTP_PORT === 465, // true for 465, false for 587
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
   },
-  connectionTimeout: 10000,   // 10 seconds
-  greetingTimeout:   10000,
-  socketTimeout:     15000,
+  connectionTimeout: 15000,
+  greetingTimeout:   15000,
+  socketTimeout:     20000,
   tls: {
     rejectUnauthorized: false,
   },
