@@ -27,6 +27,12 @@ const transporter = nodemailer.createTransport({
     user: SMTP_USER,
     pass: SMTP_PASS,
   },
+  connectionTimeout: 10000,   // 10 seconds
+  greetingTimeout:   10000,
+  socketTimeout:     15000,
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
 // ─── OTP Service ────────────────────────────────────────────────────────────
@@ -37,7 +43,10 @@ export class OtpService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
+    // Store OTP immediately — don't wait for email
     otpStore.set(email.toLowerCase(), { otp, expiresAt });
+
+    console.log(`OTP for ${email}: ${otp}`); // visible in Render logs for debugging
 
     const mailOptions = {
       from:    SMTP_FROM,
@@ -64,7 +73,10 @@ export class OtpService {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    // Send email in background — don't block the API response
+    transporter.sendMail(mailOptions).catch((err) => {
+      console.error("Failed to send OTP email:", err.message);
+    });
   }
 
   /** Verify OTP. Returns true if valid and not expired. Deletes it on success. */
