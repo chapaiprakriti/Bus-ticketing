@@ -12,6 +12,7 @@ userRouter.post("/login", userController.loginUser.bind(userController));
 // Forgot / reset password (public — no auth required)
 userRouter.post("/forgot-password", userController.forgotPassword.bind(userController));
 userRouter.post("/reset-password", userController.resetPassword.bind(userController));
+userRouter.post("/reset-password-direct", userController.resetPasswordDirect.bind(userController));
 // Sprint 3: logged in user detail
 userRouter.get("/whoami", authorized_middleware_1.authorizedMiddleware, userController.whoami.bind(userController));
 // Sprint 3: update profile + image + password

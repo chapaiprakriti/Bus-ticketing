@@ -148,4 +148,32 @@ export class UserController {
       return ApiResponseHelper.error(res, error.message || "Failed to reset password", 500);
     }
   }
+
+  // ── Reset Password Direct: no OTP needed (verified on frontend) ───────────
+  async resetPasswordDirect(req: Request, res: Response) {
+    try {
+      const { email, newPassword } = req.body;
+
+      if (!email || !newPassword) {
+        return ApiResponseHelper.error(res, "email and newPassword are required", 400);
+      }
+      if (String(newPassword).length < 6) {
+        return ApiResponseHelper.error(res, "Password must be at least 6 characters", 400);
+      }
+
+      const user = await userRepo.getUserByEmail(String(email).toLowerCase());
+      if (!user) {
+        return ApiResponseHelper.error(res, "No account found with this email", 404);
+      }
+
+      const hashedPassword = await bcryptjs.hash(String(newPassword), 10);
+      await userRepo.update(user._id.toString(), { password: hashedPassword } as any);
+
+      return ApiResponseHelper.success(res, null, "Password reset successfully. You can now log in.");
+    } catch (error: any) {
+      console.error("resetPasswordDirect error:", error);
+      return ApiResponseHelper.error(res, error.message || "Failed to reset password", 500);
+    }
+  }
 }
+

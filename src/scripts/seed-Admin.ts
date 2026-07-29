@@ -5,8 +5,8 @@ import { UserModel } from "../models/user.model";
 async function seedAdmin() {
   await connectToMongoDB();
 
-  const email = process.env.ADMIN_EMAIL || "admin@doctor.com";
-  const password = process.env.ADMIN_PASSWORD || "Admin@123";
+  const email = process.env.ADMIN_EMAIL || "admin@gmail.com";
+  const password = process.env.ADMIN_PASSWORD || "adminpassword";
 
   const existing = await UserModel.findOne({ email });
   if (existing) {
