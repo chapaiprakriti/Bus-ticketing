@@ -12,6 +12,11 @@ import { PORT, DUMMY } from "./configs/constant";
 
 const app: Application = express();
 
+if (!process.env.KHALTI_SECRET_KEY) {
+  console.error("ERROR: KHALTI_SECRET_KEY is not set. Payments will not work without it.");
+  console.error("Please configure KHALTI_SECRET_KEY in your deployment environment.");
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
