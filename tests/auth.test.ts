@@ -241,3 +241,204 @@ describe("PUT /api/v1/auth/update", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("POST /api/v1/auth/reset-password-direct", () => {
+  it("should reset password successfully for registered user", async () => {
+    const email = randEmail();
+    await register({ email, password: "OldPass123" });
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password-direct")
+      .send({ email, newPassword: "NewPass123" });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const loginRes = await login(email, "NewPass123");
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.data.token).toBeDefined();
+  });
+
+  it("should reject missing email", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password-direct")
+      .send({ newPassword: "NewPass123" });
+    expect(res.status).toBe(400);
+  });
+
+  it("should reject missing newPassword", async () => {
+    const email = randEmail();
+    await register({ email });
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password-direct")
+      .send({ email });
+    expect(res.status).toBe(400);
+  });
+
+  it("should reject short newPassword", async () => {
+    const email = randEmail();
+    await register({ email });
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password-direct")
+      .send({ email, newPassword: "123" });
+    expect(res.status).toBe(400);
+  });
+
+  it("should reject unregistered email", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password-direct")
+      .send({ email: "nouser@test.com", newPassword: "NewPass123" });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("Additional register scenarios", () => {
+  it("should register a female user", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        fullName: "Test Female",
+        email: randEmail(),
+        contactNumber: randPhone(),
+        gender: "female",
+        password: "Password123",
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.email).toBeDefined();
+  });
+
+  it("should reject missing password", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        fullName: "Test",
+        email: randEmail(),
+        contactNumber: randPhone(),
+        gender: "male",
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it("should reject duplicate contactNumber", async () => {
+    const phone = randPhone();
+    await register({ contactNumber: phone });
+    const res = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        fullName: "Test",
+        email: randEmail(),
+        contactNumber: phone,
+        gender: "male",
+        password: "Password123",
+      });
+    expect([400, 500]).toContain(res.status);
+  });
+});
+
+describe("Additional login scenarios", () => {
+  it("should login with uppercase email (emails are lowercased)", async () => {
+    const email = randEmail();
+    await register({ email, password: "Password123" });
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: email.toUpperCase(), password: "Password123" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.token).toBeDefined();
+  });
+
+  it("should login and return user email", async () => {
+    const email = randEmail();
+    await register({ email, password: "Password123" });
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password: "Password123" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.user.email).toBe(email.toLowerCase());
+  });
+});
+
+describe("Additional whoami scenarios", () => {
+  it("should return full user data including fullName", async () => {
+    const token = await registerAndGetToken();
+    const res = await request(app)
+      .get("/api/v1/auth/whoami")
+      .set(authHeader(token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.fullName).toBeDefined();
+  });
+
+  it("should return correct user after registration", async () => {
+    const email = randEmail();
+    await register({ email, fullName: "Unique Name" });
+    const loginRes = await login(email);
+    const token = loginRes.body.data.token;
+    const res = await request(app)
+      .get("/api/v1/auth/whoami")
+      .set(authHeader(token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.email).toBe(email.toLowerCase());
+  });
+});
+
+describe("Additional forgot-password scenarios", () => {
+  it("should reject invalid email format", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "notanemail" });
+    expect(res.status).toBe(400);
+  });
+
+  it("should reject empty email", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "" });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("Additional reset-password scenarios", () => {
+  it("should reject short newPassword", async () => {
+    const email = randEmail();
+    await register({ email });
+    await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email });
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({
+        email,
+        otp: "000000",
+        newPassword: "12345",
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it("should reject missing email", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ otp: "123456", newPassword: "NewPass123" });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("Additional update profile scenarios", () => {
+  it("should update contactNumber", async () => {
+    const token = await registerAndGetToken();
+    const newPhone = randPhone();
+    const res = await request(app)
+      .put("/api/v1/auth/update")
+      .set(authHeader(token))
+      .send({ contactNumber: newPhone });
+    expect(res.status).toBe(200);
+    expect(res.body.data.contactNumber).toBe(newPhone);
+  });
+
+  it("should update gender", async () => {
+    const token = await registerAndGetToken();
+    const res = await request(app)
+      .put("/api/v1/auth/update")
+      .set(authHeader(token))
+      .send({ gender: "female" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.gender).toBe("female");
+  });
+});
